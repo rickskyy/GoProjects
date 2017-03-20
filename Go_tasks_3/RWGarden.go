@@ -126,7 +126,7 @@ func main() {
 	)
 	gMatrix := NewGarden(N,M)
 
-	var path = "garden.txt"
+	var path = "resources/garden.txt"
 	file, err := os.Create(path)
 	if err != nil {
 		panic(err)
