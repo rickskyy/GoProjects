@@ -76,8 +76,13 @@ func main() {
 			if array.arrayList[i] != array.arrayList[i+1]{
 				stopFlag = false
 			}
-			fmt.Print(array.arrayList[i], " ")
+			if array.arrayList[i] == true {
+				fmt.Print(0)
+			} else {
+				fmt.Print(1)
+			}
 		}
+		fmt.Println()
 		fmt.Println("/-------------------------------------------------------------")
 
 		if array.arrayList[N/2-1] != array.arrayList[N/2] {
