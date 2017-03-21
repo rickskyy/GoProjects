@@ -62,7 +62,6 @@ func check_equality(strings *[4]string, diff *[4][4]int) bool {
 	for i:=0; i < 4; i++ {
 		for j:=0; j < 4; j++ {
 			(*diff)[i][j] = str_diff(&(*strings)[i], &(*strings)[j]);
-			(*diff)[j][i] = -(*diff)[i][j];
 		}
 	}
 

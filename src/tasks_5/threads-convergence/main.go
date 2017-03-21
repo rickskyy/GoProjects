@@ -21,108 +21,93 @@ const MAX = 100;
 var seed = rand.NewSource(time.Now().UnixNano());
 var random = rand.New(seed);
 
-type custom_array struct {
-	data       * []int;
-	sum_change chan int;
-	sum        chan int;
-	terminate  chan bool;
+type sum_array_t struct {
+	data       [10]int;
+	sum        int;
 }
 
-func handler(arrays* []custom_array) {
-	for true {
-		var array_sums = make([]int, 3);
-		result := true;
-		prevSum := 0;
-		for i := range *arrays {
-			array_sums[i] = <-(*arrays)[i].sum;
-			if (i > 0 && array_sums[i] != prevSum) {
-				result = false;
-			}
-			prevSum = array_sums[i];
-		}
+func check_sum(arrays* [3]sum_array_t, diffs *[3][3]int) bool {
 
-		if (result) {
-			for i := range *arrays {
-				(*arrays)[i].terminate <- true;
-
-			}
-		} else {
-			for i := range *arrays {
-				(*arrays)[i].sum_change <- getChangeValue(i, &array_sums);
-			}
-			fmt.Println("SUCCESS");
+	for i := 0; i < 3; i++ {
+		for j := 0; j < 3; j++ {
+			(*diffs)[i][j] = (*arrays)[i].sum - (*arrays)[j].sum;
 		}
 	}
+
+	for i := 1; i < 3; i++ {
+		if ((*diffs)[0][i] != 0) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
+func change_value(array* [10]int, diffs* [3]int) {
 
-func generateArray() custom_array {
-	result_array := make([]int, SIZE)
-	for i := range result_array {
-		result_array[i] = random.Intn(MAX);
+	sum := 0;
+
+	for i:=0; i < 3; i++ {
+		sum += (*diffs)[i];
 	}
-	result_channel := make(chan int);
-	terminate := make(chan bool);
-	sum := make(chan int);
-	return custom_array{
-		data: &result_array,
-		sum_change: result_channel,
-		terminate: terminate,
-		sum: sum,
+
+	index := random.Intn(10);
+
+	if(sum > 0) {
+		(*array)[index] -= 1;
+	} else {
+		(*array)[index] += 1;
 	}
 }
 
-func changeValue(array* []int, value int) {
+func worker(array *sum_array_t, diffs* [3]int, done chan int) {
 
-	index := random.Intn(SIZE);
-	(*array)[index] += value;
-	fmt.Printf("Index %d changed on value %d\n", index, value);
-}
+	change_value(&array.data, diffs);
 
-func getChangeValue(index int, sums* []int) int {
-	dif := 0;
-	for i := range *sums {
-		if (i == index) {
-			continue;
-		}
-
-		dif += (*sums)[index] - (*sums)[i];
+	(*array).sum = 0;
+	for i := 0; i < 3; i++ {
+		(*array).sum += (*array).data[i];
 	}
-	fmt.Printf("Diff = %d\n", dif);
-	if (dif > 0) {
-		return -1;
-	}
-	return 1;
-}
 
-func worker(array* custom_array) {
-	for true {
-		sum := 0;
-		for i := range *array.data {
-			sum += (*array.data)[i];
-		}
-		fmt.Printf("NOW SUM: %d\n", sum);
-		//fmt.Scanln();
-		array.sum <-sum;
-		select {
-		case <-array.terminate:
-			fmt.Printf("Terminate with sum %d", sum);
-			return;
-		default:
-			changeValue(array.data, <-array.sum_change);
-		}
-	}
+	done <- 1;
 }
 
 func main() {
-	var arrays = make([]custom_array, 3, SIZE);
-	for i := range arrays {
-		arrays[i] = generateArray();
-		go worker(&arrays[i]);
-		fmt.Println(arrays[i].data)
+	var arrays [3]sum_array_t;
+	var diffs [3][3]int;
+	var done = make(chan int);
+
+	for i := 0; i < len(arrays); i++ {
+		sum := 0;
+
+		var result_array [10]int;
+
+		for j := 0; j < 10; j++ {
+			result_array[j] = random.Intn(MAX);
+			sum += result_array[j]
+		}
+
+		arrays[i] = sum_array_t{
+			data: result_array,
+			sum: sum,
+		}
 	}
 
-	go handler(&arrays);
-	fmt.Scanln();
+	fmt.Printf("%v\n\n", arrays);
 
+	for check_sum(&arrays, &diffs) {
+
+		fmt.Printf("%v\n\n", diffs);
+
+		for i := 0; i < 3; i++ {
+			go worker(&arrays[i], &diffs[i], done);
+			fmt.Println(arrays[i].data)
+		}
+
+		for i := 0; i < 3; i++ {
+			<- done;
+		}
+	}
+
+	fmt.Printf("%v\n\n", diffs);
 }
